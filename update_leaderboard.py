@@ -43,16 +43,22 @@ if os.path.exists(submissions_dir):
 
 # 4. Create Leaderboard (Full History)
 if leaderboard_data:
-    # Create DF and immediately force all columns to uppercase
     df = pd.DataFrame(leaderboard_data)
-    df.columns = df.columns.str.upper()
+    
+    # Standardize names and remove hidden spaces
+    df.columns = df.columns.str.strip().str.upper()
+    
+    # If duplicate MAE columns exist, keep only the first one to force it to 1D
+    if isinstance(df.get('MAE'), pd.DataFrame):
+        df = df.loc[:, ~df.columns.duplicated()]
 
-    # If MAE is missing (e.g., empty CSV), create it as NaN to prevent crash
-    if 'MAE' not in df.columns:
-        df['MAE'] = pd.NA
+    # Force MAE to be a 1D Series even if something went wrong
+    mae_series = df['MAE']
+    if isinstance(mae_series, pd.DataFrame):
+        mae_series = mae_series.iloc[:, 0]
 
-    # Explicitly convert the Series
-    df['MAE'] = pd.to_numeric(df['MAE'], errors='coerce')
+    # Now convert to numeric safely
+    df['MAE'] = pd.to_numeric(mae_series, errors='coerce')
     
     # Drop rows without scores and sort
     df = df.dropna(subset=['MAE']).sort_values(by=["MAE", "TEAM"])
@@ -61,11 +67,9 @@ if leaderboard_data:
         # 5. DENSE RANKING
         df['RANK'] = df['MAE'].rank(method='dense').astype(int)
         
-        # Select and rename for final output
         leaderboard_df = df[['RANK', 'TEAM', 'MAE']]
         leaderboard_df.columns = ['Rank', 'Team', 'MAE']
     else:
-        print("No valid numeric scores found.")
         leaderboard_df = pd.DataFrame(columns=['Rank', 'Team', 'MAE'])
         
     # Formatting for Markdown display
