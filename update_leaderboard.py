@@ -41,25 +41,24 @@ if os.path.exists(submissions_dir):
             except Exception as e:
                 print(f"Error processing {team_name}: {e}")
 
-# 4. Create Leaderboard (Allowing multiple entries per team)
+# 4. Create Leaderboard (Full History)
 if leaderboard_data:
     df = pd.DataFrame(leaderboard_data)
     
-    # Standardize column names
-    df.columns = [c.capitalize() for c in df.columns]
+    # Standardize all column names to UPPERCASE to prevent "Mae" vs "MAE" errors
+    df.columns = [c.upper() for c in df.columns]
     
-    # Ensure MAE is numeric and sort (lowest MAE is still better)
-    df['Mae'] = pd.to_numeric(df['Mae'], errors='coerce')
-    df = df.dropna(subset=['Mae']).sort_values(by=["Mae", "Team"])
+    # Safely convert to numeric and sort
+    df['MAE'] = pd.to_numeric(df['MAE'], errors='coerce')
+    df = df.dropna(subset=['MAE']).sort_values(by=["MAE", "TEAM"])
     
     # 5. DENSE RANKING
-    # This will give the same rank to identical scores
-    df['Rank'] = df['Mae'].rank(method='dense').astype(int)
+    df['RANK'] = df['MAE'].rank(method='dense').astype(int)
     
-    # Final column order
-    leaderboard_df = df[['Rank', 'Team', 'Mae']]
+    # Set final display columns
+    leaderboard_df = df[['RANK', 'TEAM', 'MAE']]
     leaderboard_df.columns = ['Rank', 'Team', 'MAE']
-
+    
     # Formatting for Markdown display
     def format_rank(rank):
         if rank == 1: return "🥇 1st"
