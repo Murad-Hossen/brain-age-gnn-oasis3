@@ -43,22 +43,27 @@ if os.path.exists(submissions_dir):
 
 # 4. Create Leaderboard (Full History)
 if leaderboard_data:
+    # Force creation of DataFrame
     df = pd.DataFrame(leaderboard_data)
     
-    # Standardize all column names to UPPERCASE to prevent "Mae" vs "MAE" errors
+    # Standardize column names immediately
     df.columns = [c.upper() for c in df.columns]
     
-    # Safely convert to numeric and sort
-    df['MAE'] = pd.to_numeric(df['MAE'], errors='coerce')
-    df = df.dropna(subset=['MAE']).sort_values(by=["MAE", "TEAM"])
-    
-    # 5. DENSE RANKING
-    df['RANK'] = df['MAE'].rank(method='dense').astype(int)
-    
-    # Set final display columns
-    leaderboard_df = df[['RANK', 'TEAM', 'MAE']]
-    leaderboard_df.columns = ['Rank', 'Team', 'MAE']
-    
+    # CRITICAL FIX: Ensure 'MAE' column exists before calling to_numeric
+    if 'MAE' in df.columns:
+        # We ensure we are passing the Series explicitly
+        df['MAE'] = pd.to_numeric(df.get('MAE'), errors='coerce')
+        df = df.dropna(subset=['MAE']).sort_values(by=["MAE", "TEAM"])
+        
+        # 5. DENSE RANKING
+        df['RANK'] = df['MAE'].rank(method='dense').astype(int)
+        
+        # Set final display columns
+        leaderboard_df = df[['RANK', 'TEAM', 'MAE']]
+        leaderboard_df.columns = ['Rank', 'Team', 'MAE']
+    else:
+        print("Warning: MAE column not found in data.")
+        
     # Formatting for Markdown display
     def format_rank(rank):
         if rank == 1: return "🥇 1st"
