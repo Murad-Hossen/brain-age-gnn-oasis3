@@ -6,10 +6,10 @@ on:
       - main
     paths:
       - 'submissions/**' 
-  workflow_dispatch: # Allows you to manually trigger the update from the Actions tab
+  workflow_dispatch:
 
 permissions:
-  contents: write # Grants the bot permission to push changes to your repo
+  contents: write
 
 jobs:
   build:
@@ -40,9 +40,11 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # This adds everything in the leaderboard folder safely
-          git add leaderboard/
-          git add leaderboard.html
+          # 1. Add the CSV and Markdown files
+          git add leaderboard/leaderboard.csv leaderboard/LEADERBOARD.md
           
-          # Only commit if there are actually changes to avoid 'nothing to commit' errors
+          # 2. Add the HTML file from the docs folder (where your script saves it)
+          git add docs/leaderboard.html
+          
+          # 3. Only commit and push if there are changes
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update leaderboard [skip ci]" && git push)
