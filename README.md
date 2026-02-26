@@ -74,7 +74,6 @@ Each MRI session is represented as a graph:
 │   ├── leaderboard.csv
 │   └── leaderboard.md
 │
-├── update_leaderboard.py
 └── README.md
 
 ```
