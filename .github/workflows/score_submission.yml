@@ -45,16 +45,30 @@ jobs:
 
           # 2. Get only NEWLY added files with timestamps
           # --diff-filter=A ensures we only look at newly created files
-          NEW_FILES_WITH_TIME=$(git log --diff-filter=AM --format="%ct" --name-only origin/main...HEAD | awk '
-            /^[0-9]+$/ { current_time=$1; next }
-            /\.enc$/ { print current_time, $0 }
-          ' | sort -nr)
+          # NEW_FILES_WITH_TIME=$(git log --diff-filter=AM --format="%ct" --name-only origin/main...HEAD | awk '
+          #   /^[0-9]+$/ { current_time=$1; next }
+          #   /\.enc$/ { print current_time, $0 }
+          # ' | sort -nr)
 
-          if [ -z "$NEW_FILES_WITH_TIME" ]; then
+          # if [ -z "$NEW_FILES_WITH_TIME" ]; then
+          #   echo "score=No New Submission" >> $GITHUB_OUTPUT
+          #   echo "multi_note=ℹ️ No new .enc submission files detected in this PR." >> $GITHUB_OUTPUT
+          #   exit 0
+          # fi
+
+          # 2. Get NEW or MODIFIED files using git diff
+          # This looks at all .enc files in the submissions/ folder changed in this PR
+          FILES=$(git diff --name-only origin/main...HEAD | grep '^submissions/.*\.enc$' || true)
+
+          if [ -z "$FILES" ]; then
             echo "score=No New Submission" >> $GITHUB_OUTPUT
-            echo "multi_note=ℹ️ No new .enc submission files detected in this PR." >> $GITHUB_OUTPUT
+            echo "multi_note=ℹ️ No .enc submission files detected in this PR changes." >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          # Use the first file found
+          FILE=$(echo "$FILES" | head -n 1)
+          NEW_FILES_WITH_TIME="0 $FILE" # Dummy timestamp for PR preview
 
           # 3. Select the latest added file
           FILE=$(echo "$NEW_FILES_WITH_TIME" | head -n 1 | cut -d' ' -f2-)
