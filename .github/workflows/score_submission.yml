@@ -45,7 +45,7 @@ jobs:
 
           # 2. Get only NEWLY added files with timestamps
           # --diff-filter=A ensures we only look at newly created files
-          NEW_FILES_WITH_TIME=$(git log --diff-filter=A --format="%ct" --name-only origin/main...HEAD | awk '
+          NEW_FILES_WITH_TIME=$(git log --diff-filter=AM --format="%ct" --name-only origin/main...HEAD | awk '
             /^[0-9]+$/ { current_time=$1; next }
             /\.enc$/ { print current_time, $0 }
           ' | sort -nr)
