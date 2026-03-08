@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-      contents: read
+      contents: write
+      repository-projects: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,9 +39,9 @@ jobs:
           git fetch origin pull/${{ github.event.pull_request.number }}/head:pr_branch
           git checkout pr_branch -- submissions/
 
-          # 2. Find the submission file
-          # We check the directory directly instead of relying on git logs
-          FILES=$(ls submissions/*.enc 2>/dev/null || true)
+          # 2. Find the submission file (excluding the sample if others exist)
+          # This ensures we prioritize the actual team submission
+          FILES=$(ls submissions/*.enc | grep -v "sample_submission.enc" || ls submissions/sample_submission.enc 2>/dev/null || true)
 
           if [ -z "$FILES" ]; then
             echo "score=No New Submission" >> $GITHUB_OUTPUT
@@ -70,7 +71,7 @@ jobs:
             FORMATTED_SCORE=$(printf "%.8f" $RAW_SCORE)
             echo "score=$FORMATTED_SCORE" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Post Score to PR
         uses: mshick/add-pr-comment@v2
         if: always()
