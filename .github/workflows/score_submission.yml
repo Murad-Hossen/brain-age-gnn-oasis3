@@ -39,26 +39,46 @@ jobs:
           git fetch origin pull/${{ github.event.pull_request.number }}/head:pr_branch
           git checkout pr_branch -- submissions/
 
-          # 2. Find ONLY user file (ignore sample)
-          FILE=$(ls submissions/*.enc | grep -v "sample_submission.enc" | head -n 1)
-          if [ -z "$FILE" ]; then FILE="submissions/sample_submission.enc"; fi
-          
-          # 3. Metadata
-          FILENAME=$(basename "$FILE")
-          TEAM_NAME="${FILENAME%.*}"
-          
-          echo "team_name=$TEAM_NAME" >> $GITHUB_OUTPUT
-          echo "multi_note=✅ Evaluating: \`$FILE\`" >> $GITHUB_OUTPUT
+          # 2. Find submission file(s) changed relative to main
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD submissions/*.enc | grep -v "sample_submission.enc")
+          NUM_CHANGED=$(echo "$CHANGED_FILES" | wc -l)
 
-          # 4. Score
-          python competition/evaluate.py --file "$FILE" | tee out.txt
-          RAW_SCORE=$(grep "SCORE_MAE" out.txt | awk '{print $2}')
-          
-          if [ -z "$RAW_SCORE" ] || [ "$RAW_SCORE" == "None" ]; then
-            echo "score=Error" >> $GITHUB_OUTPUT
+          if [ "$NUM_CHANGED" -eq 0 ]; then
+              # No new submission
+              FILE=""
+              echo "multi_note=⚠️ No submission detected in this PR." >> $GITHUB_OUTPUT
+          elif [ "$NUM_CHANGED" -eq 1 ]; then
+              # Exactly one submission changed, evaluate it
+              FILE="$CHANGED_FILES"
+              echo "multi_note=✅ Evaluating: \`$FILE\`" >> $GITHUB_OUTPUT
           else
-            FORMATTED_SCORE=$(printf "%.8f" $RAW_SCORE)
-            echo "score=$FORMATTED_SCORE" >> $GITHUB_OUTPUT
+              # More than one submission changed → warning
+              FILE=""
+              echo "multi_note=⚠️ Multiple submissions detected! Only one submission per PR is allowed." >> $GITHUB_OUTPUT
+          fi
+
+          # Extract team name if a file was selected
+          if [ -n "$FILE" ]; then
+              FILENAME=$(basename "$FILE")
+              TEAM_NAME="${FILENAME%.*}"
+              echo "team_name=$TEAM_NAME" >> $GITHUB_OUTPUT
+          else
+              echo "team_name=Unknown" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -n "$FILE" ]; then
+            # 4. Score
+            python competition/evaluate.py --file "$FILE" | tee out.txt
+            RAW_SCORE=$(grep "SCORE_MAE" out.txt | awk '{print $2}')
+            
+            if [ -z "$RAW_SCORE" ] || [ "$RAW_SCORE" == "None" ]; then
+              echo "score=Error" >> $GITHUB_OUTPUT
+            else
+              FORMATTED_SCORE=$(printf "%.8f" $RAW_SCORE)
+              echo "score=$FORMATTED_SCORE" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Score Not Evaluated" >> $GITHUB_OUTPUT
           fi
 
       - name: Post Score to PR
